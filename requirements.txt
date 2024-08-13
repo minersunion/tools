@@ -1,0 +1,4 @@
+git+https://github.com/opentensor/bittensor.git@release/7.3.1#egg=bittensor
+pandas==2.2.2
+black==24.8.0
+pre-commit==3.8.0
