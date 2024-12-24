@@ -3,6 +3,7 @@ import traceback
 from datetime import timedelta
 
 import bittensor
+import bittensor_cli
 from bittensor import SubnetInfo
 import pandas as pd
 
@@ -34,12 +35,14 @@ def left_align_formatter(width):
 def get_info(config):
     print(f"Subnet: {config.netuid}")
 
-    coldkeys, _ = bittensor.commands.wallets._get_coldkey_ss58_addresses_for_path(config.wallet.path)
+    coldkeys, _ = bittensor_cli.cli.wallets._get_coldkey_ss58_addresses_for_path(config.wallet.path)
 
     weights: bool = config.weights
     subtensor = bittensor.subtensor(config=config, network=config.chain_endpoint, log_verbose=False)
 
-    subnet_info: SubnetInfo = subtensor.get_subnet_info(config.netuid)
+    subnet_infos: list[SubnetInfo] = subtensor.get_all_subnets_info()
+    subnet_info = [subnet_info for subnet_info in subnet_infos if subnet_info.netuid == config.netuid][0]
+
     metagraph: bittensor.metagraph = subtensor.metagraph(config.netuid)
     current_block = subtensor.get_current_block()
     uids = metagraph.uids.tolist()
@@ -98,10 +101,10 @@ def get_info(config):
         trust = metagraph.trust[uid]
         vtrust = metagraph.validator_trust[uid]
         is_validator = stake.tao > 1_024
-        mine = "✅" if axon.coldkey in coldkeys else "❌"
+        mine = "MINE" if axon.coldkey in coldkeys else "-"
 
         block_at_registration = int(str(subtensor.query_subtensor("BlockAtRegistration", None, [config.netuid, uid])))
-        since_reg: str = prettify_time((current_block - block_at_registration) * bittensor.__blocktime__)
+        since_reg: str = prettify_time((current_block - block_at_registration) * bittensor.BLOCKTIME)
         immune = block_at_registration + subnet_info.immunity_period > current_block
         immune = "✅" if immune else "❌"
 
