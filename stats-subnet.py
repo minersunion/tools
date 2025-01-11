@@ -108,12 +108,12 @@ def get_info(config):
         immune = block_at_registration + subnet_info.immunity_period > current_block
         immune = "✅" if immune else "❌"
 
-        if config.long_key:
+        if config.hot_key:
             pretty_hotkey = axon.hotkey
         else:
             pretty_hotkey = axon.hotkey[:12]
 
-        if config.long_key:
+        if config.cold_key:
             pretty_coldkey = axon.coldkey
         else:
             pretty_coldkey = axon.coldkey[:12]
@@ -203,7 +203,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--netuid", type=int, default=0, help="The chain subnet uid.")
     parser.add_argument("--weights", action="store_true", help="Show the validator weights.")
-    parser.add_argument("--long_key", action="store_true", help="Show the full hot and cold keys.")
+    parser.add_argument("--hot-key", dest="hot_key", action="store_true", help="Show the full hot key.")
+    parser.add_argument("--cold-key", dest="cold_key", action="store_true", help="Show the full cold key.")
     parser.add_argument("--sort", type=str, default="emission")  # TODO allow more sorting rather than emission or trust
     parser.add_argument("--round", type=str, default=5)
 
