@@ -1,4 +1,4 @@
-git+https://github.com/opentensor/bittensor.git@release/8.5.1#egg=bittensor
+git+https://github.com/opentensor/bittensor.git@release/9.0.0#egg=bittensor
 pandas==2.2.2
 black==24.8.0
 pre-commit==3.8.0

@@ -103,7 +103,8 @@ def get_info(config):
         is_validator = stake.tao > 1_024
         mine = "MINE" if axon.coldkey in coldkeys else "-"
 
-        block_at_registration = int(str(subtensor.query_subtensor("BlockAtRegistration", None, [config.netuid, uid])))
+        block_at_registration = subtensor.query_subtensor("BlockAtRegistration", None, [config.netuid, uid])
+        block_at_registration = int(block_at_registration.value)
         since_reg: str = prettify_time((current_block - block_at_registration) * bittensor.BLOCKTIME)
         immune = block_at_registration + subnet_info.immunity_period > current_block
         immune = "✅" if immune else "❌"
