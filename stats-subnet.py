@@ -140,7 +140,7 @@ def get_info(config):
         else:
             pretty_coldkey = axon.coldkey[:12]
 
-        pretty_hotkey = identities.get(axon.hotkey).display if axon.hotkey in identities else pretty_hotkey
+        pretty_coldkey = identities.get(axon.coldkey).name if axon.coldkey in identities else pretty_coldkey
 
         stats = {
             "full_address": full_address,
