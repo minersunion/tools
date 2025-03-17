@@ -4,8 +4,12 @@ from datetime import timedelta
 
 import bittensor
 import bittensor_cli
-from bittensor import SubnetInfo
+from bittensor import SubnetInfo, BLOCKTIME, MetagraphInfoPool, ChainIdentity
 import pandas as pd
+from rich.console import Console
+from rich.table import Table
+
+console = Console()
 
 
 def looking_for_index(_list, _value):
@@ -24,12 +28,16 @@ def prettify_time(seconds):
     return time_str
 
 
-def calculate_widths(df):
-    return {col: max(len(col), df[col].astype(str).str.len().max()) + 2 for col in df.columns}
+def display_table(title, df):
+    table = Table(title=title)
 
+    for col in df.columns:
+        table.add_column(col, justify="left")
 
-def left_align_formatter(width):
-    return lambda x: str(x).ljust(width)
+    for _, row in df.iterrows():
+        table.add_row(*map(str, row))
+
+    console.print(table)
 
 
 def get_info(config):
@@ -40,12 +48,22 @@ def get_info(config):
     weights: bool = config.weights
     subtensor = bittensor.subtensor(config=config, network=config.chain_endpoint, log_verbose=False)
 
+    identities: dict[str, ChainIdentity] = subtensor.get_delegate_identities()
+
     subnet_infos: list[SubnetInfo] = subtensor.get_all_subnets_info()
     subnet_info = [subnet_info for subnet_info in subnet_infos if subnet_info.netuid == config.netuid][0]
 
     metagraph: bittensor.metagraph = subtensor.metagraph(config.netuid)
     current_block = subtensor.get_current_block()
     uids = metagraph.uids.tolist()
+
+    tempo_blocks: int = metagraph.tempo
+    tempo_seconds: int = tempo_blocks * BLOCKTIME
+    seconds_in_day: int = 60 * 60 * 24
+    tempos_per_day: int = int(seconds_in_day / tempo_seconds)
+
+    pool: MetagraphInfoPool = metagraph.pool
+    alpha_token_price: float = pool.tao_in / pool.alpha_in
 
     unique_ip_addresses = set()
 
@@ -100,7 +118,7 @@ def get_info(config):
         emission = metagraph.E[uid]
         trust = metagraph.trust[uid]
         vtrust = metagraph.validator_trust[uid]
-        is_validator = stake.tao > 1_024
+        is_validator = vtrust > 0.01
         mine = "MINE" if axon.coldkey in coldkeys else "-"
 
         block_at_registration = subtensor.query_subtensor("BlockAtRegistration", None, [config.netuid, uid])
@@ -108,6 +126,9 @@ def get_info(config):
         since_reg: str = prettify_time((current_block - block_at_registration) * bittensor.BLOCKTIME)
         immune = block_at_registration + subnet_info.immunity_period > current_block
         immune = "✅" if immune else "❌"
+
+        daily_rewards_alpha: float = float(tempos_per_day * emission)
+        daily_rewards_tao: float = daily_rewards_alpha * alpha_token_price
 
         if config.hot_key:
             pretty_hotkey = axon.hotkey
@@ -119,6 +140,8 @@ def get_info(config):
         else:
             pretty_coldkey = axon.coldkey[:12]
 
+        pretty_hotkey = identities.get(axon.hotkey).display if axon.hotkey in identities else pretty_hotkey
+
         stats = {
             "full_address": full_address,
             "uid": uid,
@@ -126,7 +149,9 @@ def get_info(config):
             # "prometheus": neuron.prometheus_info.version,
             "last_update": calc_last_update,
             "stake": stake.tao,
-            "emission": emission,
+            "emission": emission or 0,
+            "daily_rewards_alpha": daily_rewards_alpha,
+            "daily_rewards_tao": daily_rewards_tao,
             "trust": trust,
             "vtrust": vtrust,
             "coldkey": pretty_coldkey,
@@ -168,19 +193,11 @@ def get_info(config):
     validators_df = validators_df[columns_order]
     miners_df = miners_df[columns_order]
 
-    # Create formatters for each column to align left
-    validators_widths = calculate_widths(validators_df)
-    miners_widths = calculate_widths(miners_df)
-    formatters_validators = {col: left_align_formatter(validators_widths[col]) for col in validators_df.columns}
-    formatters_miners = {col: left_align_formatter(miners_widths[col]) for col in miners_df.columns}
+    console.print("\n[bold]Validators:[/bold]\n")
+    display_table("Validators", validators_df)
 
-    # Display Validators with left-aligned columns
-    print("\nValidators:\n")
-    print(validators_df.to_string(formatters=formatters_validators, justify="left", index=False))
-
-    # Display Miners with left-aligned columns
-    print("\nMiners:\n")
-    print(miners_df.to_string(formatters=formatters_miners, justify="left", index=False))
+    console.print("\n[bold]Miners:[/bold]\n")
+    display_table("Miners", miners_df)
 
     # Summary statistics
     print()
