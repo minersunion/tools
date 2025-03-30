@@ -4,6 +4,7 @@ from datetime import timedelta
 
 import bittensor
 import bittensor_cli
+import requests
 from bittensor import SubnetInfo, BLOCKTIME, MetagraphInfoPool, ChainIdentity
 import pandas as pd
 from rich.console import Console
@@ -40,6 +41,23 @@ def display_table(title, df):
     console.print(table)
 
 
+def get_tao_price_usd() -> float:
+    tao_price_url = "https://hermes.pyth.network/v2/updates/price/latest?ids%5B%5D=0x410f41de235f2db824e562ea7ab2d3d3d4ff048316c61d629c0b93f58584e1af"
+
+    response = requests.get(tao_price_url)
+    if response.status_code != 200:
+        print(f"Failed to get TAO price: {response.text}")
+        return 0
+
+    data = response.json()
+    parsed_item = data["parsed"][0]
+    price = parsed_item["price"]
+    raw_price = float(price["price"])
+    expo = int(price["expo"])
+    tao_price = raw_price * (10**expo)
+    return tao_price
+
+
 def get_info(config):
     print(f"Subnet: {config.netuid}")
 
@@ -71,6 +89,8 @@ def get_info(config):
 
     uids_to_check = []
     personal_scores = {}
+
+    tao_price = get_tao_price_usd()
 
     if weights:
         print(f"{'uid':<10}{'weights':<15}")
@@ -115,9 +135,9 @@ def get_info(config):
         calc_last_update: int = curr_block - last_update
         full_address = f"{ip_address}:{port}"
 
-        emission = metagraph.E[uid]
-        trust = metagraph.trust[uid]
-        vtrust = metagraph.validator_trust[uid]
+        emission = float(metagraph.E[uid])
+        trust = float(metagraph.trust[uid])
+        vtrust = float(metagraph.validator_trust[uid])
         is_validator = vtrust > 0.01
         mine = "MINE" if axon.coldkey in coldkeys else "-"
 
@@ -143,23 +163,23 @@ def get_info(config):
         pretty_coldkey = identities.get(axon.coldkey).name if axon.coldkey in identities else pretty_coldkey
 
         stats = {
-            "full_address": full_address,
+            "address": full_address,
             "uid": uid,
             "axon": axon.version,
-            # "prometheus": neuron.prometheus_info.version,
-            "last_update": calc_last_update,
+            "last upd.": calc_last_update,
             "stake": stake.tao,
             "emission": emission or 0,
-            "daily_rewards_alpha": daily_rewards_alpha,
-            "daily_rewards_tao": daily_rewards_tao,
+            "alpha/d": daily_rewards_alpha,
+            "tao/d": daily_rewards_tao,
+            "$/d": daily_rewards_tao * tao_price,
             "trust": trust,
             "vtrust": vtrust,
             "coldkey": pretty_coldkey,
             "hotkey": pretty_hotkey,
-            "since_reg": since_reg,
+            "reg since": since_reg,
             "mine": mine,
             "immune": immune,
-            "duplicate_ip": "✅" if ip_address in unique_ip_addresses else "❌",
+            "dupl. ip": "✅" if ip_address in unique_ip_addresses else "❌",
         }
 
         if is_validator:
@@ -182,27 +202,22 @@ def get_info(config):
     validators_df = validators_df.sort_values(by=sort_keys, ascending=False)
     miners_df = miners_df.sort_values(by=sort_keys, ascending=False)
 
-    # Add rank column based on index after sorting
+    # Add P. column based on index after sorting
     validators_df = validators_df.reset_index(drop=True)
     miners_df = miners_df.reset_index(drop=True)
-    validators_df["rank"] = validators_df.index + 1
-    miners_df["rank"] = miners_df.index + 1
+    validators_df["P."] = validators_df.index + 1
+    miners_df["P."] = miners_df.index + 1
 
-    # Reorder columns to have "rank" first
-    columns_order = ["rank"] + [col for col in validators_df.columns if col != "rank"]
+    # Reorder columns to have "P." first
+    columns_order = ["P."] + [col for col in validators_df.columns if col != "P."]
     validators_df = validators_df[columns_order]
     miners_df = miners_df[columns_order]
 
-    console.print("\n[bold]Validators:[/bold]\n")
     display_table("Validators", validators_df)
-
-    console.print("\n[bold]Miners:[/bold]\n")
     display_table("Miners", miners_df)
 
     # Summary statistics
     print()
-    print(f"{'[Validators] Active':<40}{len(validators_df)}")
-    print(f"{'[Miners]     Active':<40}{len(miners_df)}")
     print(f"{'[Validators] Emissions ~/epoch':<40}{validators_df['emission'].sum()}")
     print(f"{'[Miners]     Emissions ~/epoch':<40}{miners_df['emission'].sum()}")
     print(f"{'[Validators] Emissions ~/day':<40}{validators_df['emission'].sum() * 20}")
@@ -224,7 +239,7 @@ if __name__ == "__main__":
     parser.add_argument("--hot-key", dest="hot_key", action="store_true", help="Show the full hot key.")
     parser.add_argument("--cold-key", dest="cold_key", action="store_true", help="Show the full cold key.")
     parser.add_argument("--sort", type=str, default="emission")  # TODO allow more sorting rather than emission or trust
-    parser.add_argument("--round", type=str, default=5)
+    parser.add_argument("--round", type=str, default=3)
 
     bittensor.subtensor.add_args(parser)
     bittensor.logging.add_args(parser)
