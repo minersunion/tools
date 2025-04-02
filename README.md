@@ -11,10 +11,10 @@ pip install -r requirements.txt
 Scripts to get a quick overview of the performing keys of a subnet.
 
 ```bash
-# specifying subnet uid:
-python stats-subnet.py --netuid 0
+# specifying subnet uid and show the full hotkey
+python stats-subnet.py --hot-key --netuid 0
 # with all available arguments
-python stats-subnet.py --netuid 0 --weights --long_key --round 6 --sort trust 
+python stats-subnet.py --netuid 0 --weights --round 6 --sort trust 
 # with bittensor args
 python stats-subnet.py --netuid 0 --subtensor.network local --wallet.path "~/my/bittensor/wallets/path"
 ```
@@ -22,9 +22,6 @@ python stats-subnet.py --netuid 0 --subtensor.network local --wallet.path "~/my/
 ### root subnet example
 
 ![root subnet example](pics/stats-subnet-0.png)
-
-### subnet 2 total example
-![subnet 2 total example](pics/stats-subnet-1.png)
 
 ## Contribution
 
