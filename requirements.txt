@@ -1,4 +1,5 @@
 git+https://github.com/opentensor/bittensor.git@release/9.1.0#egg=bittensor
+git+https://github.com/opentensor/btcli.git@v9.2.0#egg=bittensor_cli
 pandas==2.2.2
 black==24.8.0
 pre-commit==3.8.0

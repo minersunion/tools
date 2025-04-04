@@ -58,7 +58,7 @@ def get_tao_price_usd() -> float:
     return tao_price
 
 
-def get_info(config):
+def get_subnet_info(config):
     print(f"Subnet: {config.netuid}")
 
     coldkeys, _ = bittensor_cli.cli.wallets._get_coldkey_ss58_addresses_for_path(config.wallet.path)
@@ -226,7 +226,7 @@ def get_info(config):
 
 def main(config):
     try:
-        get_info(config)
+        get_subnet_info(config)
     except Exception as e:
         bittensor.logging.error(e)
         traceback.print_exc()
